@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimeZero - Калькулятор ресурсов</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body { height: 100%; overflow: hidden; }
+
+        body {
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            background: #1c1a15;
+            background-image:
+                radial-gradient(ellipse at 20% 50%, rgba(60, 40, 10, 0.3) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(70, 35, 5, 0.2) 0%, transparent 50%);
+            color: #d4c9a8;
+            padding: 20px;
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 4px;
+            color: #e8c35a;
+            font-size: 1.4em;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px rgba(232, 195, 90, 0.25);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #7a6d4e;
+            font-size: 0.7em;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+            border-bottom: 1px solid #3a3425;
+            padding-bottom: 12px;
+        }
+
+        h2 {
+            font-size: 0.8em;
+            color: #e8c35a;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            padding: 8px 14px;
+            background: linear-gradient(90deg, rgba(80, 60, 20, 0.5), transparent);
+            border-left: 3px solid #e8c35a;
+        }
+
+        .section {
+            background: rgba(35, 30, 20, 0.8);
+            border: 1px solid #3a3425;
+            margin-bottom: 0;
+            position: relative;
+        }
+
+        .section::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(232, 195, 90, 0.15), transparent);
+        }
+
+        .section-body { padding: 10px 14px; }
+
+        /* --- Две колонки ресурсов --- */
+        .resources-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0 24px;
+        }
+
+        table.resources {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table.resources th {
+            font-size: 0.6em;
+            color: #6a5e42;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 0 6px 4px;
+            font-weight: normal;
+        }
+
+        table.resources th:first-child { text-align: left; }
+        table.resources th:nth-child(2),
+        table.resources th:nth-child(3),
+        table.resources th:nth-child(4) { text-align: right; }
+
+        table.resources td {
+            padding: 5px 6px;
+            border-bottom: 1px solid rgba(58, 52, 37, 0.6);
+        }
+
+        table.resources tr:last-child td { border-bottom: none; }
+
+        table.resources td:first-child {
+            font-size: 0.85em;
+            color: #d4c9a8;
+            white-space: nowrap;
+        }
+
+        table.resources td:nth-child(2) { text-align: right; }
+
+        table.resources td:nth-child(3),
+        table.resources td:nth-child(4) {
+            text-align: right;
+            font-size: 0.85em;
+            color: #8a7d5e;
+        }
+
+        table.resources td:nth-child(4).active { color: #e8c35a; }
+
+        table.resources input {
+            width: 72px;
+            padding: 4px 6px;
+            border: 1px solid #3a3425;
+            background: rgba(20, 18, 12, 0.8);
+            color: #e8c35a;
+            font-family: inherit;
+            font-size: 0.85em;
+            text-align: right;
+        }
+
+        table.resources input.qty-input {
+            width: 64px;
+            color: #d4c9a8;
+        }
+
+        table.resources input:focus {
+            outline: none;
+            border-color: #e8c35a;
+            box-shadow: 0 0 6px rgba(232, 195, 90, 0.15);
+        }
+
+        /* --- Итого --- */
+        .total-block {
+            border: 1px solid #3a3425;
+            border-top: none;
+            background: linear-gradient(180deg, rgba(80, 60, 20, 0.35), rgba(35, 30, 20, 0.8));
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0;
+        }
+
+        .total-label {
+            color: #7a6d4e;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            font-size: 0.85em;
+        }
+
+        .total-value {
+            color: #e8c35a;
+            font-size: 1.6em;
+            text-shadow: 0 0 15px rgba(232, 195, 90, 0.2);
+            letter-spacing: 2px;
+        }
+
+        .total-value.empty { color: #3a3425; }
+
+        /* --- Логи --- */
+        .section.logs {
+            border-top: none;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section.logs .section-body {
+            flex: 1;
+            display: flex;
+        }
+
+        textarea {
+            width: 100%;
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #3a3425;
+            background: rgba(20, 18, 12, 0.8);
+            color: #a09070;
+            font-family: 'Share Tech Mono', 'Courier New', monospace;
+            font-size: 0.8em;
+            resize: none;
+            line-height: 1.5;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #5a4e35;
+            color: #d4c9a8;
+        }
+
+        textarea::placeholder { color: #4a4230; }
+
+        /* scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1c1a15; }
+        ::-webkit-scrollbar-thumb { background: #3a3425; }
+    </style>
+</head>
+<body>
+    <h1>Resource Calculator</h1>
+    <div class="subtitle">Developed by The Alliance</div>
+
+    <div class="section">
+        <h2>Ресурсы</h2>
+        <div class="section-body">
+            <div class="resources-columns">
+                <table class="resources" id="prices-left">
+                    <thead>
+                        <tr><th>Ресурс</th><th>Цена</th><th>Кол-во</th><th>Сумма</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <table class="resources" id="prices-right">
+                    <thead>
+                        <tr><th>Ресурс</th><th>Цена</th><th>Кол-во</th><th>Сумма</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="total-block">
+        <span class="total-label">Итого</span>
+        <span class="total-value empty" id="grand-total">0</span>
+    </div>
+
+    <div class="section logs">
+        <h2>Логи</h2>
+        <div class="section-body">
+            <textarea id="logs" placeholder="Вставьте логи...&#10;&#10;11.02.26 22:10 Получено: Metals [120] от 'The Alliance'&#10;11.02.26 22:10 Получено: Polymers [80] от 'The Alliance'"></textarea>
+        </div>
+    </div>
+
+    <script>
+        const RESOURCES = [
+            'Metals',
+            'Precious metals',
+            'Polymers',
+            'Organic',
+            'Silicon',
+            'Radioactive materials',
+            'Gems',
+            'Venom'
+        ];
+
+        const half = Math.ceil(RESOURCES.length / 2);
+        const tbodyLeft = document.querySelector('#prices-left tbody');
+        const tbodyRight = document.querySelector('#prices-right tbody');
+        const logsTextarea = document.getElementById('logs');
+        const grandTotalEl = document.getElementById('grand-total');
+
+        function buildRow(name) {
+            const saved = localStorage.getItem('price_' + name) || '';
+            const tr = document.createElement('tr');
+            tr.innerHTML =
+                '<td>' + name + '</td>' +
+                '<td><input type="number" min="0" step="0.1" data-resource="' + name + '" value="' + saved + '" placeholder="0"></td>' +
+                '<td><input type="number" min="0" step="1" class="qty-input" data-qty="' + name + '" placeholder="0"></td>' +
+                '<td data-sum="' + name + '">&mdash;</td>';
+            return tr;
+        }
+
+        RESOURCES.forEach((name, i) => {
+            const target = i < half ? tbodyLeft : tbodyRight;
+            target.appendChild(buildRow(name));
+        });
+
+        document.addEventListener('input', e => {
+            if (e.target.dataset.resource) {
+                localStorage.setItem('price_' + e.target.dataset.resource, e.target.value);
+            }
+            if (e.target.tagName === 'INPUT') {
+                calculate();
+            }
+        });
+
+        function getPrices() {
+            const prices = {};
+            document.querySelectorAll('[data-resource]').forEach(input => {
+                prices[input.dataset.resource] = parseFloat(input.value) || 0;
+            });
+            return prices;
+        }
+
+        const RESOURCE_MAP = {};
+        RESOURCES.forEach(name => { RESOURCE_MAP[name.toLowerCase()] = name; });
+
+        function parseLogs(text) {
+            const totals = {};
+            const regex = /([A-Za-z][A-Za-z ]*?)\s*\[(\d+)\]/g;
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                const raw = match[1].trim();
+                const name = RESOURCE_MAP[raw.toLowerCase()] || raw;
+                const count = parseInt(match[2], 10);
+                totals[name] = (totals[name] || 0) + count;
+            }
+            return totals;
+        }
+
+        function applyLogs() {
+            const text = logsTextarea.value.trim();
+            const totals = text ? parseLogs(text) : {};
+
+            RESOURCES.forEach(name => {
+                const qtyInput = document.querySelector('[data-qty="' + name + '"]');
+                qtyInput.value = totals[name] || '';
+            });
+
+            calculate();
+        }
+
+        function calculate() {
+            const prices = getPrices();
+            let grandTotal = 0;
+
+            RESOURCES.forEach(name => {
+                const qtyInput = document.querySelector('[data-qty="' + name + '"]');
+                const sumEl = document.querySelector('[data-sum="' + name + '"]');
+                const qty = parseInt(qtyInput.value) || 0;
+                const price = prices[name] || 0;
+                const sum = qty * price;
+                grandTotal += sum;
+
+                if (qty > 0) {
+                    sumEl.textContent = sum.toLocaleString();
+                    sumEl.classList.add('active');
+                } else {
+                    sumEl.innerHTML = '&mdash;';
+                    sumEl.classList.remove('active');
+                }
+            });
+
+            grandTotalEl.textContent = grandTotal > 0 ? grandTotal.toLocaleString() : '0';
+            grandTotalEl.classList.toggle('empty', grandTotal === 0);
+        }
+
+        logsTextarea.addEventListener('input', applyLogs);
+        calculate();
+    </script>
+</body>
+</html>
