@@ -333,9 +333,13 @@
 
         function parseLogs(text) {
             const totals = {};
+            const lines = text.includes('Подобрал')
+                ? text.split('\n').filter(l => l.includes('Подобрал'))
+                : text.split('\n');
+            const source = lines.join('\n');
             const regex = /([A-Za-z][A-Za-z ]*?)\s*\[(\d+)\]/g;
             let match;
-            while ((match = regex.exec(text)) !== null) {
+            while ((match = regex.exec(source)) !== null) {
                 const raw = match[1].trim();
                 const name = RESOURCE_MAP[raw.toLowerCase()] || raw;
                 const count = parseInt(match[2], 10);
