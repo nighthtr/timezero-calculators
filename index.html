@@ -177,6 +177,33 @@
             font-size: 1.6em;
             text-shadow: 0 0 15px rgba(232, 195, 90, 0.2);
             letter-spacing: 2px;
+            cursor: pointer;
+            position: relative;
+            transition: text-shadow 0.2s;
+        }
+
+        .total-value:hover:not(.empty) {
+            text-shadow: 0 0 25px rgba(232, 195, 90, 0.4);
+        }
+
+        .total-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .copied-tip {
+            font-size: 0.7em;
+            color: #a0d468;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .copied-tip.show {
+            opacity: 1;
         }
 
         .total-value.empty { color: #3a3425; }
@@ -244,7 +271,10 @@
 
     <div class="total-block">
         <span class="total-label">Итого</span>
-        <span class="total-value empty" id="grand-total">0</span>
+        <div class="total-right">
+            <span class="copied-tip" id="copied-tip">скопировано</span>
+            <span class="total-value empty" id="grand-total">0</span>
+        </div>
     </div>
 
     <div class="section logs">
@@ -347,9 +377,18 @@
                 }
             });
 
-            grandTotalEl.textContent = grandTotal > 0 ? grandTotal.toLocaleString() : '0';
+            grandTotalEl.textContent = grandTotal > 0 ? Math.ceil(grandTotal).toLocaleString() : '0';
             grandTotalEl.classList.toggle('empty', grandTotal === 0);
         }
+
+        grandTotalEl.addEventListener('click', () => {
+            const value = grandTotalEl.textContent.trim();
+            if (value === '0') return;
+            navigator.clipboard.writeText(value.replace(/\s/g, ''));
+            const tip = document.getElementById('copied-tip');
+            tip.classList.add('show');
+            setTimeout(() => tip.classList.remove('show'), 1200);
+        });
 
         logsTextarea.addEventListener('input', applyLogs);
         calculate();
