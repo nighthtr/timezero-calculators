@@ -631,18 +631,32 @@
 
         function parseLogs(text) {
             const totals = {};
-            const lines = text.includes('Подобрал')
-                ? text.split('\n').filter(l => l.includes('Подобрал'))
-                : text.split('\n');
-            const source = lines.join('\n');
             const regex = /([A-Za-z][A-Za-z ]*?)\s*\[(\d+)\]/g;
             let match;
-            while ((match = regex.exec(source)) !== null) {
-                const raw = match[1].trim();
-                const name = RESOURCE_MAP[raw.toLowerCase()] || raw;
-                const count = parseInt(match[2], 10);
-                totals[name] = (totals[name] || 0) + count;
+            const lines = text.split('\n');
+            const hasPickup = lines.some(l => l.includes('Подобрал'));
+            if (hasPickup) {
+                lines.forEach(line => {
+                    let sign = 0;
+                    if (line.includes('Подобрал')) sign = 1;
+                    else if (line.includes('Выброшено')) sign = -1;
+                    if (!sign) return;
+                    while ((match = regex.exec(line)) !== null) {
+                        const raw = match[1].trim();
+                        const name = RESOURCE_MAP[raw.toLowerCase()] || raw;
+                        totals[name] = (totals[name] || 0) + sign * parseInt(match[2], 10);
+                    }
+                });
+            } else {
+                const source = text;
+                while ((match = regex.exec(source)) !== null) {
+                    const raw = match[1].trim();
+                    const name = RESOURCE_MAP[raw.toLowerCase()] || raw;
+                    totals[name] = (totals[name] || 0) + parseInt(match[2], 10);
+                }
             }
+            // Убираем нулевые/отрицательные
+            Object.keys(totals).forEach(k => { if (totals[k] <= 0) delete totals[k]; });
             return totals;
         }
 
@@ -875,14 +889,19 @@
                 totalXP += parseInt(m[1], 10);
             }
 
-            const pickupLines = text.split('\n').filter(l => l.includes('Подобрал:'));
-            const itemRegex = /([A-Za-z][A-Za-z ]*?)\s*\[(\d+)\]/g;
-            const pickupText = pickupLines.join('\n');
-            while ((m = itemRegex.exec(pickupText)) !== null) {
-                const name = m[1].trim();
-                const count = parseInt(m[2], 10);
-                items[name] = (items[name] || 0) + count;
-            }
+            const itemRegex = /([\w\u0400-\u04FF][\w\u0400-\u04FF ]*?)\s*\[(\d+)\]/g;
+            const lines = text.split('\n');
+            lines.forEach(line => {
+                let sign = 0;
+                if (line.includes('Подобрал:')) sign = 1;
+                else if (line.includes('Выброшено:')) sign = -1;
+                if (!sign) return;
+                while ((m = itemRegex.exec(line)) !== null) {
+                    const name = m[1].trim();
+                    const count = parseInt(m[2], 10);
+                    items[name] = (items[name] || 0) + sign * count;
+                }
+            });
 
             const avgXP = battles > 0 ? Math.round(totalXP / battles) : 0;
             return { battles, totalXP, avgXP, items };
@@ -899,6 +918,7 @@
             const tbody = document.querySelector('#exp-items tbody');
             tbody.innerHTML = '';
             const sorted = Object.entries(items)
+                .filter(([, v]) => v > 0)
                 .sort((a, b) => b[1] - a[1]);
             sorted.forEach(([name, count]) => {
                 const tr = document.createElement('tr');
