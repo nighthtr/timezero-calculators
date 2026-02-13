@@ -344,6 +344,20 @@
             z-index: 1;
         }
 
+        #wp-players thead th {
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.2s;
+        }
+
+        #wp-players thead th:hover { color: #d4c9a8; }
+
+        #wp-players thead th.sort-desc::after { content: ' \25BC'; }
+        #wp-players thead th.sort-asc::after  { content: ' \25B2'; }
+
+        #wp-players thead th.sort-desc,
+        #wp-players thead th.sort-asc { color: #e8c35a; }
+
         .place-badge {
             display: inline-block;
             width: 18px;
@@ -734,6 +748,39 @@
             return String(val);
         }
 
+        const wpSort = { col: 'diff', dir: 'desc' };
+        const wpColKeys = ['name', 'got', 'gave', 'diff'];
+
+        function updateWpSortHeaders() {
+            document.querySelectorAll('#wp-players thead th').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+            if (wpSort.col !== null && wpSort.dir) {
+                const idx = wpColKeys.indexOf(wpSort.col);
+                const ths = document.querySelectorAll('#wp-players thead th');
+                if (ths[idx]) ths[idx].classList.add('sort-' + wpSort.dir);
+            }
+        }
+
+        document.querySelector('#wp-players thead').addEventListener('click', e => {
+            const th = e.target.closest('#wp-players thead th');
+            if (!th) return;
+            const idx = Array.from(th.parentElement.children).indexOf(th);
+            const col = wpColKeys[idx];
+            if (!col) return;
+
+            if (wpSort.col !== col) {
+                wpSort.col = col;
+                wpSort.dir = 'desc';
+            } else if (wpSort.dir === 'desc') {
+                wpSort.dir = 'asc';
+            } else {
+                wpSort.col = null;
+                wpSort.dir = null;
+            }
+            renderWarStats();
+        });
+
         function renderWarStats() {
             const text = warLogsTextarea.value.trim();
             const { players, daily } = text ? parseWarLogs(text) : { players: {}, daily: {} };
@@ -741,12 +788,31 @@
             // Таблица игроков
             const pBody = document.querySelector('#wp-players tbody');
             pBody.innerHTML = '';
-            const sorted = Object.entries(players)
-                .map(([name, s]) => ({ name, got: s.got, gave: s.gave, diff: s.got - s.gave }))
-                .sort((a, b) => b.diff - a.diff);
-            sorted.forEach((s, i) => {
+            const rows = Object.entries(players)
+                .map(([name, s]) => ({ name, got: s.got, gave: s.gave, diff: s.got - s.gave }));
+
+            // Рейтинг по разнице (для медалей)
+            const ranked = rows.slice().sort((a, b) => b.diff - a.diff);
+            const rankMap = {};
+            ranked.forEach((r, i) => { rankMap[r.name] = i; });
+
+            // Сортировка для отображения
+            const sorted = rows.slice();
+            if (wpSort.col && wpSort.dir) {
+                const col = wpSort.col;
+                const mult = wpSort.dir === 'asc' ? 1 : -1;
+                sorted.sort((a, b) => {
+                    if (col === 'name') return mult * a.name.localeCompare(b.name, 'ru');
+                    return mult * (a[col] - b[col]);
+                });
+            } else {
+                sorted.sort((a, b) => b.diff - a.diff);
+            }
+
+            sorted.forEach(s => {
                 const tr = document.createElement('tr');
-                const place = i < 3 ? i + 1 : 0;
+                const ri = rankMap[s.name];
+                const place = ri < 3 ? ri + 1 : 0;
                 if (place) tr.className = 'place-' + place;
                 const badge = place ? '<span class="place-badge">' + place + '</span>' : '';
                 tr.innerHTML =
@@ -756,6 +822,8 @@
                     '<td class="' + diffClass(s.diff) + '">' + diffText(s.diff) + '</td>';
                 pBody.appendChild(tr);
             });
+
+            updateWpSortHeaders();
 
             // Таблица по дням
             const dBody = document.querySelector('#wp-daily tbody');
@@ -790,6 +858,7 @@
         }
 
         warLogsTextarea.addEventListener('input', renderWarStats);
+        updateWpSortHeaders();
 
         /* === Опыт === */
         const expLogsTextarea = document.getElementById('exp-logs');
