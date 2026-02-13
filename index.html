@@ -380,6 +380,59 @@
             font-weight: bold;
         }
 
+        /* --- Опыт: карточки статистики --- */
+        .exp-stats {
+            display: flex;
+            gap: 10px;
+            padding: 10px 14px;
+        }
+
+        .exp-card {
+            flex: 1;
+            background: rgba(20, 18, 12, 0.8);
+            border: 1px solid #3a3425;
+            padding: 10px 14px;
+            text-align: center;
+        }
+
+        .exp-card-label {
+            font-size: 0.6em;
+            color: #6a5e42;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+
+        .exp-card-value {
+            font-size: 1.3em;
+            color: #e8c35a;
+            text-shadow: 0 0 10px rgba(232, 195, 90, 0.2);
+        }
+
+        #tab-experience { overflow: hidden; }
+
+        #tab-experience > .section {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        #tab-experience > .section:nth-child(2) {
+            flex: 1;
+            min-height: 80px;
+        }
+
+        #tab-experience > .section:nth-child(2) > .section-body {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        #tab-experience > .section:nth-child(3) {
+            height: 20%;
+        }
+
         /* scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #1c1a15; }
@@ -392,7 +445,8 @@
 
     <div class="tab-nav">
         <button class="tab-btn active" data-tab="tab-resources">Ресурсы</button>
-        <button class="tab-btn" data-tab="tab-warpoints">Варпоинты</button>
+        <button class="tab-btn" data-tab="tab-experience">Опыт</button>
+	<button class="tab-btn" data-tab="tab-warpoints">Варпоинты</button>
     </div>
 
     <div class="tab-content active" id="tab-resources">
@@ -468,6 +522,48 @@
             <h2>Логи</h2>
             <div class="section-body">
                 <textarea id="war-logs" placeholder="Вставьте логи клановых войн...&#10;&#10;13.02.26 00:08 Zerr0 отдал 1 вар-поинт(а/ов) в войне против Dark Souls погибнув от руки gun seller в бою 9439078.&#10;13.02.26 00:23 Zerr0 получил 1 вар-поинт(а/ов) в войне против Dark Souls за убийство Алй-Хусейн в бою 9440242."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-content" id="tab-experience">
+        <div class="section">
+            <h2>Статистика</h2>
+            <div class="exp-stats">
+                <div class="exp-card">
+                    <div class="exp-card-label">Боёв</div>
+                    <div class="exp-card-value" id="exp-battles">0</div>
+                </div>
+                <div class="exp-card">
+                    <div class="exp-card-label">Общий опыт</div>
+                    <div class="exp-card-value" id="exp-total">0</div>
+                </div>
+                <div class="exp-card">
+                    <div class="exp-card-label">Среднее за бой</div>
+                    <div class="exp-card-value" id="exp-avg">0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Подобранные предметы</h2>
+            <div class="section-body">
+                <table class="warpoints" id="exp-items">
+                    <thead>
+                        <tr>
+                            <th>Предмет</th>
+                            <th>Кол-во</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section logs">
+            <h2>Логи</h2>
+            <div class="section-body">
+                <textarea id="exp-logs" placeholder="Вставьте логи боёв...&#10;&#10;12.02.26 02:08 Вы победили в бою 9359141. Получено опыта: 4812&#10;12.02.26 02:08 Подобрал: Organic [2], Venom [2], ..."></textarea>
             </div>
         </div>
     </div>
@@ -694,6 +790,57 @@
         }
 
         warLogsTextarea.addEventListener('input', renderWarStats);
+
+        /* === Опыт === */
+        const expLogsTextarea = document.getElementById('exp-logs');
+
+        function parseExpLogs(text) {
+            let battles = 0;
+            let totalXP = 0;
+            const items = {};
+
+            const battleRegex = /Вы победили в бою \d+\.\s*Получено опыта:\s*(\d+)/g;
+            let m;
+            while ((m = battleRegex.exec(text)) !== null) {
+                battles++;
+                totalXP += parseInt(m[1], 10);
+            }
+
+            const pickupLines = text.split('\n').filter(l => l.includes('Подобрал:'));
+            const itemRegex = /([A-Za-z][A-Za-z ]*?)\s*\[(\d+)\]/g;
+            const pickupText = pickupLines.join('\n');
+            while ((m = itemRegex.exec(pickupText)) !== null) {
+                const name = m[1].trim();
+                const count = parseInt(m[2], 10);
+                items[name] = (items[name] || 0) + count;
+            }
+
+            const avgXP = battles > 0 ? Math.round(totalXP / battles) : 0;
+            return { battles, totalXP, avgXP, items };
+        }
+
+        function renderExpStats() {
+            const text = expLogsTextarea.value.trim();
+            const { battles, totalXP, avgXP, items } = text ? parseExpLogs(text) : { battles: 0, totalXP: 0, avgXP: 0, items: {} };
+
+            document.getElementById('exp-battles').textContent = battles.toLocaleString();
+            document.getElementById('exp-total').textContent = totalXP.toLocaleString();
+            document.getElementById('exp-avg').textContent = avgXP.toLocaleString();
+
+            const tbody = document.querySelector('#exp-items tbody');
+            tbody.innerHTML = '';
+            const sorted = Object.entries(items)
+                .sort((a, b) => b[1] - a[1]);
+            sorted.forEach(([name, count]) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td>' + name_esc(name) + '</td>' +
+                    '<td>' + count.toLocaleString() + '</td>';
+                tbody.appendChild(tr);
+            });
+        }
+
+        expLogsTextarea.addEventListener('input', renderExpStats);
 
         document.getElementById('wp-players').addEventListener('click', e => {
             const td = e.target.closest('#wp-players td:first-child');
